@@ -1,11 +1,5 @@
-# here only executting stuff. no functions or classes
-
-## um die models und functions hier nutzen zu können, muss man die datein als module importieren. 
-## das geht auch wenn das notebeooks sind, ist aber deutlich einfacher, wenn es einfach .py dateien sind.
-
-#!pip install -r requirements.txt
-
 #!/usr/bin/env python3
+#-*- coding:utf-8 -*-
 #$ -l cuda=1 # remove this line when no GPU is needed!
 #$ -q all.q # do not fill the qlogin queue
 #$ -cwd # start processes in current working directory
