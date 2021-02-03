@@ -1,0 +1,4 @@
+.deepnote/
+__pycache__/
+data/
+checkpoints/
