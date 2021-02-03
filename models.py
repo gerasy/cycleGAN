@@ -41,6 +41,17 @@ class CycleGAN(object):
         
 
     def train(self,param):
+        #debug
+        print("training started!...")
+        if not os.path.exists(self.root_path_checkpoints):
+            print("creating checkpointsfolder", self.root_path_checkpoints)
+            os.makedirs(self.root_path_checkpoints)
+        #log debug store batch info to log file   
+        log_file_path =  self.root_path_checkpoints+"/log"+param.name+".txt"
+        print("logfile running at " + log_file_path)
+        log_file  = open(log_file_path,"a+")
+        log_file.write("\nstated training at time:{}".format(time.time()))
+        log_file.close()
 
         self.genA2B.apply(self._init_weights).to(self.device)
         self.genB2A.apply(self._init_weights).to(self.device)
@@ -215,7 +226,12 @@ class CycleGAN(object):
                 losses["identity_loss"].append(identity_loss.detach().cpu().numpy())
                 '''
 
-                print("batch {} done in {} seconds, cycle_loss:{}".format(i+1,np.round(inner_tac-inner_tic, decimals = 4),cycle_loss))
+                batch_info_string = "batch {} done in {} seconds, cycle_loss:{}".format(i+1,np.round(inner_tac-inner_tic, decimals = 4),cycle_loss)
+                #debug store batch info into logfile
+                log_file  = open(log_file_path,"a+")
+                log_file.write("\n"+batch_info_string)
+                log_file.close()
+                print(batch_info_string)
 
             # save the last model
             if (epoch==n_epochs-1) :
