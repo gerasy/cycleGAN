@@ -202,7 +202,7 @@ def get_data_h2z():
     folder_name = "horse2zebra"
     path = "./data/"
     url = "https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip"
-
+    get_data(url,path, folder_name)
     #display download progress 
     #https://blog.shichao.io/2012/10/04/progress_speed_indicator_for_urlretrieve_in_python.html
     def reporthook(count, block_size, total_size):
