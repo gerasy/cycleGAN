@@ -13,13 +13,17 @@ except:
     model_param_id = 0 #param_train_cycle_list[0] should be default model params
 
 import importlib
-import models
-import sys
-import functions 
+#import models
+#import functions 
 import torch
 import torch.nn as nn
-importlib.reload(models)
-importlib.reload(functions)
+#importlib.reload(models)
+#importlib.reload(functions)
+
+#different import way for cluster
+import imp
+models = imp.load_source('models', './models.py')
+functions = imp.load_source('functions', './functions.py')
 
 # init CycleGAN
 genA2B = models.Generator(input_nc=3, output_nc=3, n_residual_blocks=9)
