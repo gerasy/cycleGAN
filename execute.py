@@ -8,6 +8,7 @@
 #Cluster settings, 
 try:
     model_param_id = int(os.environ['SGE_TASK_ID'])
+    print("starting task with model_param_id: %s"%model_param_id)
 except:
     print("no SGE_TASK_ID set, choosing default model parameters ")
     model_param_id = 0 #param_train_cycle_list[0] should be default model params

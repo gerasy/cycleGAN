@@ -24,8 +24,9 @@ from torch.autograd import Variable
 import torchvision.transforms as transforms
 from PIL import Image
 
-import functions
-
+#import functions
+import imp 
+functions = imp.load_source('functions', './functions.py')
 
 class CycleGAN(object):
     def __init__(self, genA2B, genB2A, discA, discB, classifier, device, root_path_data, root_path_checkpoints):
