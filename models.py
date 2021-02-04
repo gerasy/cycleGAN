@@ -127,7 +127,7 @@ class CycleGAN(object):
         ]
         
         # create dataloader
-        train_dataset = ImageDataset(pathA_Train, pathB_Train, transforms_ = trans,  unaligned=True, rgb = False)
+        train_dataset = ImageDataset(pathA_Train, pathB_Train, transforms_ = trans,  unaligned=True, rgb = True)  #Hier war rgb = False
         train_loader = DataLoader(train_dataset, batch_size=batchSize, shuffle = True) 
 
         # putting all nets to training mode
@@ -720,6 +720,7 @@ class ImageDataset(Dataset):
         
         #transform image AND convert to RGB to fix grayscale image dimension problem
         if self.rgb:
+            print("debug: converted to rgb!")
             sampleA = sampleA.convert('RGB')
             sampleB = sampleB.convert('RGB')
         #dont do transformation if there are no transforms..
