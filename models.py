@@ -255,7 +255,7 @@ class CycleGAN(object):
             np.save(self.root_path_checkpoints + "/losses_{}.npy".format(param.name), losses)
                  
             tac = time.time()
-            print("epoch {} of {} finished in {} seconds, cycle_loss: {}".format(epoch+1,n_epochs_T, 
+            print("epoch {} of {} finished in {} seconds, cycle_loss: {}".format(epoch+1,n_epochs, 
                                                                                 np.round(tac-tic, decimals = 3), (cycle_loss))) 
         
             # update learning rates
