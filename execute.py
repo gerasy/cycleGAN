@@ -6,6 +6,7 @@
 #$ -V # provide environment variables to processes
 #$ -t 1-8 # start 8 instances: to train different models in parallel
 #Cluster settings, 
+import os
 try:
     model_param_id = int(os.environ['SGE_TASK_ID'])
     print("starting task with model_param_id: %s"%model_param_id)
