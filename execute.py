@@ -42,14 +42,16 @@ cycle  = models.CycleGAN(genA2B, genB2A, discA, discB, classifier, device, root_
 param_train_cycle  = models.Param(channels = 3, epochs = 2, size= 256,  name ="cycle_test")
 
 
-param_train1  = models.Param(channels = 3, epochs = 2, size= 256,  name ="cycle_r9_advMSE_l10", resnet_blocks=9, loss_adv=torch.nn.MSELoss(), lambdas=(10,0.5)) # default
-param_train2  = models.Param(channels = 3, epochs = 2, size= 256,  name ="cycle_r9_advMSE_l5" , resnet_blocks=9, loss_adv=torch.nn.MSELoss(), lambdas=(5,0.5))
-param_train3  = models.Param(channels = 3, epochs = 2, size= 256,  name ="cycle_r9_advL1_l10", resnet_blocks=9, loss_adv=torch.nn.L1Loss(), lambdas=(10,0.5))
-param_train4  = models.Param(channels = 3, epochs = 2, size= 256,  name ="cycle_r9_advL1_l5" , resnet_blocks=9, loss_adv=torch.nn.L1Loss(), lambdas=(5,0.5))
-param_train5  = models.Param(channels = 3, epochs = 2, size= 256,  name ="cycle_r5_advMSE_l10", resnet_blocks=5, loss_adv=torch.nn.MSELoss(), lambdas=(10,0.5))
-param_train6  = models.Param(channels = 3, epochs = 2, size= 256,  name ="cycle_r5_advMSE_l5" , resnet_blocks=5, loss_adv=torch.nn.MSELoss(), lambdas=(5,0.5))
-param_train7  = models.Param(channels = 3, epochs = 2, size= 256,  name ="cycle_r5_advL1_l10", resnet_blocks=5, loss_adv=torch.nn.L1Loss(), lambdas=(10,0.5))
-param_train8  = models.Param(channels = 3, epochs = 2, size= 256,  name ="cycle_r5_advL1_l5" , resnet_blocks=5, loss_adv=torch.nn.L1Loss(), lambdas=(5,0.5))
+targetEpoch = 100
+
+param_train1  = models.Param(channels = 3, epochs = targetEpoch, size= 256,  name ="cycle_r9_advMSE_l10", resnet_blocks=9, loss_adv=torch.nn.MSELoss(), lambdas=(10,0.5)) # default
+param_train2  = models.Param(channels = 3, epochs = targetEpoch, size= 256,  name ="cycle_r9_advMSE_l5" , resnet_blocks=9, loss_adv=torch.nn.MSELoss(), lambdas=(5,0.5))
+param_train3  = models.Param(channels = 3, epochs = targetEpoch, size= 256,  name ="cycle_r9_advL1_l10", resnet_blocks=9, loss_adv=torch.nn.L1Loss(), lambdas=(10,0.5))
+param_train4  = models.Param(channels = 3, epochs = targetEpoch, size= 256,  name ="cycle_r9_advL1_l5" , resnet_blocks=9, loss_adv=torch.nn.L1Loss(), lambdas=(5,0.5))
+param_train5  = models.Param(channels = 3, epochs = targetEpoch, size= 256,  name ="cycle_r5_advMSE_l10", resnet_blocks=5, loss_adv=torch.nn.MSELoss(), lambdas=(10,0.5))
+param_train6  = models.Param(channels = 3, epochs = targetEpoch, size= 256,  name ="cycle_r5_advMSE_l5" , resnet_blocks=5, loss_adv=torch.nn.MSELoss(), lambdas=(5,0.5))
+param_train7  = models.Param(channels = 3, epochs = targetEpoch, size= 256,  name ="cycle_r5_advL1_l10", resnet_blocks=5, loss_adv=torch.nn.L1Loss(), lambdas=(10,0.5))
+param_train8  = models.Param(channels = 3, epochs = targetEpoch, size= 256,  name ="cycle_r5_advL1_l5" , resnet_blocks=5, loss_adv=torch.nn.L1Loss(), lambdas=(5,0.5))
 param_train_cycle_list = [param_train1, param_train2, param_train3, param_train4, param_train5, param_train6, param_train7, param_train8]
 
 param_eval_testset = models.Param(channels = 3, size= 256) 
