@@ -34,15 +34,15 @@ discA  = models.Discriminator(input_nc=3)
 discB  = models.Discriminator(input_nc=3)
 classifier = models.Classifier().net
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-root_path_data = "./data/horse2zebra"
-root_path_checkpoints = "./checkpoints/horse2zebra"
+root_path_data = "./data/maps"
+root_path_checkpoints = "./checkpoints/maps"
 
 cycle  = models.CycleGAN(genA2B, genB2A, discA, discB, classifier, device, root_path_data, root_path_checkpoints)
 
 param_train_cycle  = models.Param(channels = 3, epochs = 2, size= 256,  name ="cycle_test")
 
 
-targetEpoch = 100
+targetEpoch = 50
 
 param_train1  = models.Param(channels = 3, epochs = targetEpoch, size= 256,  name ="cycle_r9_advMSE_l10", resnet_blocks=9, loss_adv=torch.nn.MSELoss(), lambdas=(10,0.5)) # default
 param_train2  = models.Param(channels = 3, epochs = targetEpoch, size= 256,  name ="cycle_r9_advMSE_l5" , resnet_blocks=9, loss_adv=torch.nn.MSELoss(), lambdas=(5,0.5))
