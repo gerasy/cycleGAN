@@ -201,12 +201,12 @@ def get_data_MNIST(version, n_train_samples, n_test_samples):
         imageio.imwrite(path, test_data[i])
 
 
-def get_data_h2z():
+def get_data_h2z(dataBaseName = "horse2zebra"):
     # downloads horse2zebra images
-    folder_name = "horse2zebra"
+    
     path = "./data/"
-    url = "https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/horse2zebra.zip"
-    get_data(url,path, folder_name)
+    url = "https://people.eecs.berkeley.edu/~taesung_park/CycleGAN/datasets/"+dataBaseName+".zip"
+    get_data(url,path, dataBaseName)
     #display download progress 
     #https://blog.shichao.io/2012/10/04/progress_speed_indicator_for_urlretrieve_in_python.html
 def reporthook(count, block_size, total_size):
@@ -362,7 +362,7 @@ def create_explanation(original, generated, model, algorithm= "integrated gradie
 
 
 
-def get_prediction_matrix( model, param_list, pre_calculated=False, source_domain = "A"):
+def get_prediction_matrix( model, param_list, pre_calculated=False, source_domain = "A",dataBaseName = "horse2zebra"):
     if not pre_calculated:
         low_pic = 0
         high_pic = 119
@@ -385,10 +385,10 @@ def get_prediction_matrix( model, param_list, pre_calculated=False, source_domai
 
             grid = np.concatenate((grid,np.array(gen_percentage)[:,inv_idx][:, np.newaxis]), axis =1)
         
-        np.save("./checkpoints/horse2zebra/prediction_matrix_{}".format(source_domain), grid)
+        np.save("./checkpoints/"+dataBaseName+"/prediction_matrix_{}".format(source_domain), grid)
     
     else:
-        grid = np.load("./checkpoints/horse2zebra/prediction_matrix_{}.npy".format(source_domain), allow_pickle=True)
+        grid = np.load("./checkpoints/"+dataBaseName+"/prediction_matrix_{}.npy".format(source_domain), allow_pickle=True)
 
     return grid
 
@@ -472,7 +472,7 @@ def plot_generated_images(model, img_idx, param_list, source_domain = "A"):
     #plt.savefig("./image_output/paper_background_2.jpg")
 ##################### plotting/ calculating  - segmentation related
 
-def get_background_loss_matrix(model, param_list, pre_calculated=False, source_domain = "A"):
+def get_background_loss_matrix(model, param_list, pre_calculated=False, source_domain = "A", dataBaseName="horse2zebra", epochToLoad = 100):
 
     if not pre_calculated:
         
@@ -504,7 +504,7 @@ def get_background_loss_matrix(model, param_list, pre_calculated=False, source_d
 
         # prepare segmentation model and generators
         model.segmentation.eval() 
-        model.load_cycle_nets(epoch = 100, model_name = param_list[0].name)
+        model.load_cycle_nets(epoch = epochToLoad, model_name = param_list[0].name)
         
         # caclulate background losses for first parameter settings
         losses = []
@@ -516,7 +516,7 @@ def get_background_loss_matrix(model, param_list, pre_calculated=False, source_d
         # calculate background losses for remaining paramter settings
         for i in range(1,len(param_list)):
             print("param number: ", i)  
-            model.load_cycle_nets(epoch = 100, model_name = param_list[i].name)
+            model.load_cycle_nets(epoch = epochToLoad, model_name = param_list[i].name)
             
             temp_list = []
             for idx in good_list: 
@@ -525,27 +525,27 @@ def get_background_loss_matrix(model, param_list, pre_calculated=False, source_d
             
             losses = np.concatenate((losses,np.array(temp_list)[:, np.newaxis]), axis =1)
         
-        np.save("./checkpoints/horse2zebra/background_loss_matrix_{}".format(source_domain), losses)
+        np.save("./checkpoints/"+dataBaseName+"/background_loss_matrix_{}".format(source_domain), losses)
     
     else:
         # if background loss matrix is already calculated just load it
-        losses= np.load("./checkpoints/horse2zebra/background_loss_matrix_{}.npy".format(source_domain), allow_pickle=True)
+        losses= np.load("./checkpoints/"+dataBaseName+"/background_loss_matrix_{}.npy".format(source_domain), allow_pickle=True)
 
     return losses
 
 # calculates the background loss for a give image from a given domain
 # background loss is the normalized difference of the non-target areas of the original and the generated image
-def calc_background_loss(model, source_domain = "A", img_idx = 0, masks_precalculated = True, plot = True):
+def calc_background_loss(model, source_domain = "A", img_idx = 0, masks_precalculated = True, plot = True, dataBaseName = "horse2zebra"):
     target_class =  "horse" if source_domain == "A" else "zebra"
     net = model.genA2B if source_domain =="A" else model.genB2A
 
-    path_org = "./data/horse2zebra/eval{}/original_{}.jpg".format(source_domain,img_idx) 
+    path_org = "./data/"+horse2zebra+"/eval{}/original_{}.jpg".format(source_domain,img_idx) 
     
     # get mask
     if not masks_precalculated:
         mask = create_mask(model = model, source_domain = source_domain, img_idx = img_idx, plot = False, save = False)
     else:
-        path_mask = "./data/horse2zebra/eval{}/mask_{}.npy".format(source_domain, img_idx) 
+        path_mask = "./data/"+horse2zebra+"/eval{}/mask_{}.npy".format(source_domain, img_idx) 
         mask = np.load(path_mask)
 
     # get original and generated image
@@ -646,15 +646,15 @@ def rgb2gray(rgb):
 
 
 # function to calculate a negative mask for a given image from a given domain # i.e. background all ones, animal all zeros
-def create_mask(model, source_domain = "A", img_idx = 0, plot = False, save = False):
-    target_class =  "horse" if source_domain == "A" else "zebra"
-    path_org = "./data/horse2zebra/eval{}/original_{}.jpg".format(source_domain,img_idx) 
+def create_mask(model, source_domain = "A", img_idx = 0, plot = False, save = False, dataBaseName = "horse2zebra", taget_class_A = "horse", taget_class_B = "zebra"):
+    target_class =  taget_class_A if source_domain == "A" else taget_class_B
+    path_org = "./data/"+dataBaseName+"/eval{}/original_{}.jpg".format(source_domain,img_idx) 
     mask = instance_segmentation(model, path_org, target = target_class)
     mask_np = mask.detach().numpy()
     mask = np.logical_xor(mask_np, np.ones(mask_np.shape))
     
     if save:
-        np.save("./data/horse2zebra/eval{}/mask_{}".format(source_domain, img_idx), mask)
+        np.save("./data/"+dataBaseName+"/eval{}/mask_{}".format(source_domain, img_idx), mask)
     if plot:
         plt.imshow(mask, cmap = "gray")
 
