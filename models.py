@@ -72,6 +72,7 @@ class CycleGAN(object):
         input_nc = param.channels       # input channels
         output_nc = param.channels      # output channels
         epoch = 0                       # starting epoch
+        saveEpoch = param.saveEpoch     # how often to save models
         n_epochs = param.epochs         # number of epochs of training
         decay_epoch = np.ceil(n_epochs / param.lr_sched) # epoch to start linearly decaying the learning rate 
         lr = param.lr                   # initial learning rate
@@ -84,6 +85,7 @@ class CycleGAN(object):
         loss_adv = param.loss_adv
         loss_cyc_ide = param.loss_cyc_ide
         down_upsampling_layers = param.down_upsampling_layers
+        
 
         pathA_Train = self.root_path_data + "/trainA/" # param.pathA_Train
         pathB_Train = self.root_path_data + "/trainB/" #param.pathB_Train
@@ -239,7 +241,7 @@ class CycleGAN(object):
                 print(batch_info_string)
 
             # save the last model
-            if (epoch==n_epochs-1) :
+            if (epoch % saveEpoch ==  0 or epoch==n_epochs-1) :
                 self._save_model(model = netG_A2B, path = self.root_path_checkpoints, name = "netG_A2B" + param.name, epoch = param.epochs)
                 self._save_model(model = netG_B2A, path = self.root_path_checkpoints, name = "netG_B2A" + param.name, epoch = param.epochs)
                 self._save_model(model = netD_A  , path = self.root_path_checkpoints, name = "netD_A"   + param.name, epoch = param.epochs)
@@ -348,8 +350,17 @@ class CycleGAN(object):
 
         self.cycle_trained = True 
 
-    def _create_evalset(self, param, name):
+    def _create_evalset_paired(self, param, name="eval"):
     ### creates eval dataset from test data
+
+    ### check if an eval dataset exists, if no -> create
+        pathA = self.root_path_data + "/{}A".format(name)
+        pathB = self.root_path_data + "/{}B".format(name)
+
+        if not os.path.exists(pathA) or not os.path.exists(pathB):
+            print("creating save folder:", pathA, " and ", pathB)
+            os.makedirs(pathA)
+            os.makedirs(pathB)
         temp = tuple([0.5 for i in range(param.channels)]) 
 
         little_t = t = [
@@ -361,9 +372,65 @@ class CycleGAN(object):
         test_loader_B = DataLoader(SingleDomainImages(self.root_path_data +"/testB/", transforms_ = little_t), batch_size=1)
         
         device = self.device
+
+
         source_domains = ["A", "B"]
         for source in source_domains:    
             loader = test_loader_A if source == "A" else test_loader_B
+            not_source = 'A' if source == 'B' else 'B'
+
+            it = iter(loader)
+            gen = self.genA2B if source == "A" else self.genB2A
+            unorm = UnNormalize(mean=temp, std=temp)
+            for i in range(len(loader)):
+
+                img = next(it).to(device)
+
+                img_copy = unorm(img.clone())
+                img_copy = img_copy.squeeze().detach().cpu().permute(1,2,0).numpy()
+
+                original = Image.fromarray((img_copy*255).astype(np.uint8))
+                original.save(self.root_path_data + "/{}{}/{}_original.jpg".format(name, source, i))
+                original.save(self.root_path_data + "/{}{}/{}_expected.jpg".format(name, not_source, i))
+
+                generated = gen(img).squeeze().detach()
+                generated = unorm(generated)
+                generated = generated.squeeze().detach().cpu().permute(1,2,0).numpy()
+                generated = Image.fromarray((generated*255).astype(np.uint8))
+                generated.save(self.root_path_data + "/{}{}/{}_generated.jpg".format(name, source, i))
+
+
+            print("finished domain {}".format(source))
+
+    def _create_evalset(self, param, name="eval"):
+        ### creates eval dataset from test data
+
+        ### check if an eval dataset exists, if no -> create
+        pathA = self.root_path_data + "/{}A".format(name)
+        pathB = self.root_path_data + "/{}B".format(name)
+
+        if not os.path.exists(pathA) or not os.path.exists(pathB):
+            print("creating save folder:", pathA, " and ", pathB)
+            os.makedirs(pathA)
+            os.makedirs(pathB)
+        temp = tuple([0.5 for i in range(param.channels)])
+
+        little_t = t = [
+            transforms.Resize(int(param.size * 1.12), Image.BICUBIC),
+            transforms.ToTensor(),
+            transforms.Normalize(temp, temp)]
+
+        test_loader_A = DataLoader(SingleDomainImages(self.root_path_data + "/testA/", transforms_=little_t),
+                                   batch_size=1)
+        test_loader_B = DataLoader(SingleDomainImages(self.root_path_data + "/testB/", transforms_=little_t),
+                                   batch_size=1)
+
+        device = self.device
+
+        source_domains = ["A", "B"]
+        for source in source_domains:
+            loader = test_loader_A if source == "A" else test_loader_B
+
 
             it = iter(loader)
             gen = self.genA2B if source == "A" else self.genB2A
@@ -372,16 +439,18 @@ class CycleGAN(object):
                 img = next(it).to(device)
 
                 img_copy = unorm(img.clone())
-                img_copy = img_copy.squeeze().detach().cpu().permute(1,2,0).numpy()
+                img_copy = img_copy.squeeze().detach().cpu().permute(1, 2, 0).numpy()
 
-                original = Image.fromarray((img_copy*255).astype(np.uint8))
-                original.save(self.root_path_data + "/{}{}/original_{}.jpg".format(name,source, i)) 
+                original = Image.fromarray((img_copy * 255).astype(np.uint8))
+                original.save(self.root_path_data + "/{}{}/original_{}.jpg".format(name, source, i))
+
 
                 generated = gen(img).squeeze().detach()
                 generated = unorm(generated)
-                generated = generated.squeeze().detach().cpu().permute(1,2,0).numpy()
-                generated =  Image.fromarray((generated*255).astype(np.uint8))
-                generated.save(self.root_path_data + "/{}{}/generated_{}.jpg".format(name, source, i)) 
+                generated = generated.squeeze().detach().cpu().permute(1, 2, 0).numpy()
+                generated = Image.fromarray((generated * 255).astype(np.uint8))
+                generated.save(self.root_path_data + "/{}{}/generated_{}.jpg".format(name, source, i))
+
             print("finished domain {}".format(source))
 
     def eval_testset(self, param, source_domain = "A",pic_number_low = 0, pic_number_high = 5, pre_generated = False, plot = True, explain = False, algorithm = "integrated gradients" ):
@@ -540,9 +609,14 @@ class CycleGAN(object):
 
     def _load_model(self, model, path, name, epoch):     
         try:
-            if self.device == "cuda":
-                model.load_state_dict(torch.load("{}/{} epoch{}".format(path, name, epoch)))
+            if self.device == torch.device("cuda"):
+                #debug
+                print("loading models to cuda")
+                model.load_state_dict(torch.load("{}/{} epoch{}".format(path, name, epoch),map_location=torch.device('cuda')))
+                model = model.to('cuda')
             else:
+                #debug
+                print("loading models to cpu")
                 model.load_state_dict(torch.load("{}/{} epoch{}".format(path, name, epoch),map_location=torch.device('cpu')))
             model.eval()
             #print("model loaded:"+"{}/{} epoch{}".format(path, name, epoch))
@@ -554,9 +628,10 @@ class CycleGAN(object):
 
 
 class Param():
-    def __init__(self, channels = 3, epochs = 100, size = 256, name="default", down_upsampling_layers=2, lr = 0.0002, lr_sched = 2.0, size_replay_buffer = 50, resnet_blocks =9, loss_adv = torch.nn.MSELoss(), loss_cyc_ide = torch.nn.L1Loss() , lambdas=(10,0.5), bs=1):
+    def __init__(self, channels = 3, epochs = 100, saveEpoch=10, size = 256, name="default", down_upsampling_layers=2, lr = 0.0002, lr_sched = 2.0, size_replay_buffer = 50, resnet_blocks =9, loss_adv = torch.nn.MSELoss(), loss_cyc_ide = torch.nn.L1Loss() , lambdas=(10,0.5), bs=1):
         self.channels = channels 
-        self.epochs = epochs     
+        self.epochs = epochs
+        self.saveEpoch = saveEpoch
         self.size = size         
         self.name = name         #which param and which value
         self.lr = lr             
