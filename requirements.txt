@@ -3,3 +3,4 @@ mlxtend==0.18.0
 captum
 torch
 torchvision
+fid_score

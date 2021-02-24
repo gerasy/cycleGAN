@@ -24,6 +24,8 @@ from torch.autograd import Variable
 import torchvision.transforms as transforms
 from PIL import Image
 
+from fid_score.fid_score import FidScore
+
 #import functions
 import imp 
 functions = imp.load_source('functions', './functions.py')
@@ -40,6 +42,7 @@ class CycleGAN(object):
         self.classifier_trained = False
         self.root_path_data = root_path_data
         self.root_path_checkpoints = root_path_checkpoints
+        self.segmentation = offShelfModels.detection.maskrcnn_resnet50_fpn(pretrained=True, progress = False)
         
 
     def train(self,param):
@@ -335,13 +338,13 @@ class CycleGAN(object):
         self.classifier_trained = True
 
 
-    def load_cycle_nets(self,epoch):
+    def load_cycle_nets(self,epoch, model_name=""):
         # loads the pretrained cycle_nets, i.e. the two generators and two discriminators. 
         
-        self._load_model(model = self.genA2B, path = self.root_path_checkpoints, name = "netG_A2B" , epoch = 100)
-        self._load_model(model = self.genB2A, path = self.root_path_checkpoints, name = "netG_B2A" , epoch = 100)
-        self._load_model(model = self.discA , path = self.root_path_checkpoints, name = "netD_A"   , epoch = 100)
-        self._load_model(model = self.discB , path = self.root_path_checkpoints, name = "netD_B"   , epoch = 100)
+        self._load_model(model = self.genA2B, path = self.root_path_checkpoints, name = "netG_A2B" + model_name, epoch = epoch)
+        self._load_model(model = self.genB2A, path = self.root_path_checkpoints, name = "netG_B2A" + model_name, epoch = epoch)
+        self._load_model(model = self.discA , path = self.root_path_checkpoints, name = "netD_A"   + model_name, epoch = epoch)
+        self._load_model(model = self.discB , path = self.root_path_checkpoints, name = "netD_B"   + model_name, epoch = epoch)
 
         self.cycle_trained = True 
 
@@ -381,7 +384,7 @@ class CycleGAN(object):
                 generated.save(self.root_path_data + "/{}{}/generated_{}.jpg".format(name, source, i)) 
             print("finished domain {}".format(source))
 
-    def eval_testset(self, param, source_domain = "A",pic_number_low = 0, pic_number_high = 5, plot = True, explain = False, algorithm = "integrated gradients" ): #bs = 1
+    def eval_testset(self, param, source_domain = "A",pic_number_low = 0, pic_number_high = 5, pre_generated = False, plot = True, explain = False, algorithm = "integrated gradients" ):
         
         temp = tuple([0.5 for i in range(param.channels)]) 
 
@@ -412,7 +415,7 @@ class CycleGAN(object):
         c = self.classifier
 
         file_number = len(os.listdir(self.root_path_data + "/eval{}".format(source_domain))) //2 -1
-        if pic_number_low < 0 or pic_number_low >= pic_number_high or pic_number_high > file_number:
+        if pic_number_low < 0 or pic_number_low > pic_number_high or pic_number_high > file_number:
             print("please choose pic_numbers in range [0,{}]".format(file_number))
             return [],[],[],[]
 
@@ -425,11 +428,17 @@ class CycleGAN(object):
             original  = Image.open(self.root_path_data + "/eval{}/original_{}.jpg".format(source_domain, i))
             original  = trans(original).unsqueeze(dim=0)
 
-            generated = Image.open(self.root_path_data + "/eval{}/generated_{}.jpg".format(source_domain, i))
-            generated = trans(generated).unsqueeze(dim=0)
+
+            if pre_generated: 
+                generated = Image.open(self.root_path_data + "/eval{}/generated_{}.jpg".format(source_domain, i))
+                generated = trans(generated).unsqueeze(dim=0)
+            else:
+                gen = self.genA2B if source_domain =="A" else self.genB2A
+                generated = gen(original.clone().detach()).detach()
 
             pred_org = np.round(softy(c(original)).detach().numpy()[:,:2], decimals = 3)
             pred_gen = np.round(softy(c(generated)).detach().numpy()[:,:2], decimals = 3)
+            
 
             original = unorm(original)
             generated = unorm(generated)
@@ -449,14 +458,72 @@ class CycleGAN(object):
                     functions.plot_predictions(original, generated, org_percentage, gen_percentage, o_attr_A, o_attr_B, g_attr_A, g_attr_B)
                 else:
                     functions.plot_predictions(original, generated, org_percentage, gen_percentage)
-            
+
+                
         return torch.cat(list_original), torch.cat(list_generated), list_org_percentages, list_gen_percentages
 
     #def continue_train():
         # hier richtige parameter wie aktuelle lr und so beachten
         # vllt doch nur eine train funktion fuer für das cycleGan die etwas flexibler ist, statt train und countiue train?
+
+
+    def _create_fidset(self, param, name):
+    ### creates fid dataset from test data
+        temp = tuple([0.5 for i in range(param.channels)]) 
+
+        little_t = t = [
+            transforms.Resize(int(param.size*1.12), Image.BICUBIC), 
+            transforms.ToTensor(),
+            transforms.Normalize(temp, temp)]
+
+        test_loader_A = DataLoader(SingleDomainImages(self.root_path_data +"/testA/", transforms_ = little_t), batch_size=1)
+        test_loader_B = DataLoader(SingleDomainImages(self.root_path_data +"/testB/", transforms_ = little_t), batch_size=1)
+        
+        device = self.device
+        source_domains = ["A", "B"]
+        for source in source_domains:    
+            loader = test_loader_A if source == "A" else test_loader_B
+
+            it = iter(loader)
+            gen = self.genA2B if source == "A" else self.genB2A
+            unorm = UnNormalize(mean=temp, std=temp)
+            for i in range(len(loader)):
+                img = next(it).to(device)
+
+                img_copy = unorm(img.clone())
+                img_copy = img_copy.squeeze().detach().cpu().permute(1,2,0).numpy()
+
+                #original = Image.fromarray((img_copy*255).astype(np.uint8))
+                #original.save(self.root_path_data + "/{}{}/original_{}.jpg".format(name,source, i)) 
+
+                generated = gen(img).squeeze().detach()
+                generated = unorm(generated)
+                generated = generated.squeeze().detach().cpu().permute(1,2,0).numpy()
+                generated =  Image.fromarray((generated*255).astype(np.uint8))
+                generated.save(self.root_path_data + "/{}/{}{}/generated_{}.jpg".format(param.name, name, source, i)) 
+            print("finished domain {}".format(source))
+            
+    def calc_fid(self, param):
+        pathAgen = self.root_path_data + "/" + param.name + "/genA"
+        pathBgen = self.root_path_data + "/" + param.name + "/genB"
+        
+        pathAtest = self.root_path_data + "/testA"
+        pathBtest = self.root_path_data + "/testB"
+        
+        if not os.path.exists(pathAgen):
+            print("creating save folder:", pathAgen, " and ", pathBgen)
+            os.makedirs(pathAgen)
+            os.makedirs(pathBgen)
+            self._create_fidset(param, name = "gen")
+        
+        fidB2A = FidScore([pathBgen, pathAtest])
+        fidA2B = FidScore([pathAgen, pathBtest])
+        scoreB2A = fidB2A.calculate_fid_score()
+        scoreA2B = fidA2B.calculate_fid_score()
+        
+        return scoreA2B, scoreB2A
     
-   
+
     def _init_weights(self, m):
         classname = m.__class__.__name__
         if classname.find('Conv') != -1:
@@ -478,7 +545,7 @@ class CycleGAN(object):
             else:
                 model.load_state_dict(torch.load("{}/{} epoch{}".format(path, name, epoch),map_location=torch.device('cpu')))
             model.eval()
-            print("model loaded:"+"{}/{} epoch{}".format(path, name, epoch))
+            #print("model loaded:"+"{}/{} epoch{}".format(path, name, epoch))
         except Exception as e:
             if not os.path.exists(path):
                 print("path doesnt exist!", path)
