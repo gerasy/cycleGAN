@@ -1023,3 +1023,32 @@ def calc_fid_scores(model, param_list):
         scoreA2B, scoreB2A = model.calc_fid(param)
         results[param.name] = (scoreA2B, scoreB2A)
     return results
+
+
+def calcL1(img1, img2):
+    temp = tuple([0.5 for i in range(3)])  # param.channels
+    little_t = [
+        transforms.Resize(int(256 * 1.12), Image.BICUBIC),  # param.size
+        transforms.ToTensor(),
+        transforms.Normalize(temp, temp)]
+
+    trans = transforms.Compose(little_t)
+
+    unnorm = models.UnNormalize(mean=temp, std=temp)
+
+    img1 = trans(img1).unsqueeze(dim=0)
+    img2 = trans(img2).unsqueeze(dim=0)
+
+    img1 = unnorm(img1)
+    img2 = unnorm(img2)
+
+    # convert img1 and ịmg2 image to greyscale and apply the mask
+    img1 = np.array(img1.squeeze().permute(1, 2, 0))
+    img2 = np.array(img2.squeeze().permute(1, 2, 0))
+
+    #print("img1.shape:{} img2.shape:{}".format(img1.shape, img2.shape))
+    # clalculate normalized background loss
+    l1 = torch.nn.L1Loss()
+    loss = l1(torch.tensor(img1), torch.tensor(img2)).item()
+    loss = np.round(loss, decimals=3)
+    return loss

@@ -350,12 +350,12 @@ class CycleGAN(object):
 
         self.cycle_trained = True 
 
-    def _create_evalset_paired(self, param, name="eval"):
+    def _create_evalset_paired(self, param, subfolder="default"):
     ### creates eval dataset from test data
-
+        f1 = "eval"
     ### check if an eval dataset exists, if no -> create
-        pathA = self.root_path_data + "/{}A".format(name)
-        pathB = self.root_path_data + "/{}B".format(name)
+        pathA = self.root_path_data + "/{}A/{}".format(f1,subfolder)
+        pathB = self.root_path_data + "/{}B/{}".format(f1,subfolder)
 
         if not os.path.exists(pathA) or not os.path.exists(pathB):
             print("creating save folder:", pathA, " and ", pathB)
@@ -390,14 +390,14 @@ class CycleGAN(object):
                 img_copy = img_copy.squeeze().detach().cpu().permute(1,2,0).numpy()
 
                 original = Image.fromarray((img_copy*255).astype(np.uint8))
-                original.save(self.root_path_data + "/{}{}/{}_original.jpg".format(name, source, i))
-                original.save(self.root_path_data + "/{}{}/{}_expected.jpg".format(name, not_source, i))
+                original.save(self.root_path_data + "/{}{}/{}/{}_original.jpg".format(f1, source,subfolder, i))
+                original.save(self.root_path_data + "/{}{}/{}/{}_expected.jpg".format(f1, not_source,subfolder, i))
 
                 generated = gen(img).squeeze().detach()
                 generated = unorm(generated)
                 generated = generated.squeeze().detach().cpu().permute(1,2,0).numpy()
                 generated = Image.fromarray((generated*255).astype(np.uint8))
-                generated.save(self.root_path_data + "/{}{}/{}_generated.jpg".format(name, source, i))
+                generated.save(self.root_path_data + "/{}{}/{}/{}_generated.jpg".format(f1, source,subfolder, i))
 
 
             print("finished domain {}".format(source))
@@ -893,7 +893,7 @@ class Classifier():
 class SingleDomainImages(Dataset):
     def __init__(self, root, transforms_=None, rgb = True):
         self.root = root
-        self.files = os.listdir(self.root)            
+        self.files = sorted(os.listdir(self.root))
         self.trans = transforms.Compose(transforms_)
         self.rgb = rgb
         
@@ -901,7 +901,7 @@ class SingleDomainImages(Dataset):
         return len(self.files)
     
     def __getitem__(self, index):
-        sample = Image.open(self.root + listdir(self.root)[index % len(listdir(self.root))])
+        sample = Image.open(self.root + self.files[index % len(self.files)])
         if self.rgb:
             sample = sample.convert('RGB')
         return self.trans(sample)
