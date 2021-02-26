@@ -54800,3 +54800,4 @@ batch 1093 done in 0.3742 seconds, cycle_loss:0.12162467837333679
 batch 1094 done in 0.3732 seconds, cycle_loss:0.2944066524505615
 batch 1095 done in 0.3753 seconds, cycle_loss:0.08265585452318192
 batch 1096 done in 0.3726 seconds, cycle_loss:0.09749871492385864
+stated training at time:1614182318.8190362
