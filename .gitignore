@@ -4,3 +4,6 @@ data/
 checkpoints/
 .DS_Store
 .ipynb_checkpoints/execute-checkpoint.ipynb 
+.idea/
+.ipynb_checkpoints/
+venv/
