@@ -233,7 +233,7 @@ class CycleGAN(object):
                 losses["identity_loss"].append(identity_loss.detach().cpu().numpy())
                 '''
 
-                batch_info_string = "batch {} done in {} seconds, cycle_loss:{}".format(i+1,np.round(inner_tac-inner_tic, decimals = 4),cycle_loss)
+                batch_info_string = "epoch {} batch {} done in {} seconds, cycle_loss:{}".format(epoch,i+1,np.round(inner_tac-inner_tic, decimals = 4),cycle_loss)
                 #debug store batch info into logfile
                 log_file  = open(log_file_path,"a+")
                 log_file.write("\n"+batch_info_string)

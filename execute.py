@@ -34,8 +34,9 @@ discA  = models.Discriminator(input_nc=3)
 discB  = models.Discriminator(input_nc=3)
 classifier = models.Classifier().net
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-root_path_data = "./data/maps"
-root_path_checkpoints = "./checkpoints/maps"
+databaseName = "cityscapes"
+root_path_data = "./data/"+databaseName
+root_path_checkpoints = "./checkpoints/"+databaseName
 
 cycle  = models.CycleGAN(genA2B, genB2A, discA, discB, classifier, device, root_path_data, root_path_checkpoints)
 
