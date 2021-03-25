@@ -4,21 +4,17 @@
 #$ -q all.q # do not fill the qlogin queue
 #$ -cwd # start processes in current working directory
 #$ -V # provide environment variables to processes
-#$ -t 1-8 # start 8 instances: to train different models in parallel
+
 #Cluster settings, 
 import os
-try:
-    model_param_id = int(os.environ['SGE_TASK_ID'])
-    print("starting task with model_param_id: %s"%model_param_id)
-except:
-    print("no SGE_TASK_ID set, choosing default model parameters ")
-    model_param_id = 0 #param_train_cycle_list[0] should be default model params
 
 import importlib
 #import models
 #import functions 
 import torch
 import torch.nn as nn
+from PIL import Image
+import torchvision.transforms as transforms
 #importlib.reload(models)
 #importlib.reload(functions)
 
@@ -34,7 +30,7 @@ discA  = models.Discriminator(input_nc=3)
 discB  = models.Discriminator(input_nc=3)
 classifier = models.Classifier().net
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-databaseName = "cityscapes"
+databaseName = "maps"
 root_path_data = "./data/"+databaseName
 root_path_checkpoints = "./checkpoints/"+databaseName
 
@@ -43,7 +39,7 @@ cycle  = models.CycleGAN(genA2B, genB2A, discA, discB, classifier, device, root_
 param_train_cycle  = models.Param(channels = 3, epochs = 2, size= 256,  name ="cycle_test")
 
 
-targetEpoch = 50
+targetEpoch = 20
 saveAt = 1 #how often to store the model (stores if epoch % saveAt == 0 || epoch == n_epochs-1 )
 
 param_train1  = models.Param(channels = 3, epochs = targetEpoch, saveEpoch = saveAt, size= 256,  name ="cycle_r9_advMSE_l10", resnet_blocks=9, loss_adv=torch.nn.MSELoss(), lambdas=(10,0.5)) # default
@@ -59,9 +55,42 @@ param_train_cycle_list = [param_train1, param_train2, param_train3, param_train4
 param_eval_testset = models.Param(channels = 3, size= 256) 
 param_train_classifier = models.Param(channels = 3, epochs = 2, size = 256, name = "classifier_test")
 
-### test functions
-''' scheint zu funktionieren, aber nicht sonderlich fuer deepnote geeigent'''
-#load the model_param_id parameters (used for parallel training on cluster)
-param_train_cycle = param_train_cycle_list[model_param_id-1]
-cycle.train(param_train_cycle)   
-print("training done")  
+
+print("generating eval sets")
+for paramItem in param_train_cycle_list:
+    #load model
+    cycle.load_cycle_nets(epoch = targetEpoch, model_name = paramItem.name)
+    print(device)
+    #generate for every test image some output image
+    cycle._create_evalset_paired(paramItem,subfolder=paramItem.name) 
+
+#MSE? SSIM? FCN? 
+
+
+print("calculating MSE errors")
+losses= {}
+for paramItem in param_train_cycle_list:
+    source_domains = ["A", "B"]
+    subfolder = paramItem.name
+    losses[paramItem.name]={}
+    for source in source_domains:  
+        losses[paramItem.name][source]=[]
+        folder=root_path_data + "/eval{}/{}/".format(source,subfolder)
+        folderSize = int(len(os.listdir(folder)) / 3)
+        for i in range(0,folderSize):
+            gen="{}{}_generated.jpg".format(folder, i)
+            exp="{}{}_expected.jpg".format(folder, i)
+            gen=Image.open(gen)
+            exp=Image.open(exp)
+            loss=functions.calcMSE(gen,exp)
+            losses[paramItem.name][source].append(loss)
+
+for paramItem in param_train_cycle_list:
+    source_domains = ["A", "B"]
+    for source in source_domains:
+        summ = np.array(losses[paramItem.name][source]).sum()
+        std = np.std(losses[paramItem.name][source])
+        overall = np.array(losses[paramItem.name]['A']).sum() + np.array(losses[paramItem.name]['B']).sum()
+        print("param:{} \t source:{} \t std:{:.4f} \t sum:{:.2f} \t overall:{:.2f}".format(paramItem.name,source,std,summ,overall))
+print("done.")
+    
