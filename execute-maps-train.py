@@ -34,7 +34,7 @@ discA  = models.Discriminator(input_nc=3)
 discB  = models.Discriminator(input_nc=3)
 classifier = models.Classifier().net
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-databaseName = "cityscapes"
+databaseName = "maps"
 root_path_data = "./data/"+databaseName
 root_path_checkpoints = "./checkpoints/"+databaseName
 

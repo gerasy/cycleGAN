@@ -5,8 +5,6 @@
 #$ -cwd # start processes in current working directory
 #$ -V # provide environment variables to processes
 
-
-
 import importlib
 import models
 import functions 
@@ -57,6 +55,6 @@ param_eval_testset = models.Param(channels = 3, size= 256)
 # parameters used for training the classifier
 param_train_classifier = models.Param(channels = 3, epochs = targetEpoch, size = 256, name = "classifier_test")
 
-
+print("calculating fid scores")
 res=functions.calc_fid_scores(model=cycle, param_list=param_train_cycle_list)
 
